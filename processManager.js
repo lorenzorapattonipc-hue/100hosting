@@ -1,4 +1,5 @@
 const { spawn } = require('child_process');
+const path = require('path');
 const { getDb } = require('./db');
 
 const processes = {};
@@ -13,17 +14,23 @@ function addLog(botId, message, level = 'info') {
 
 function startBot(botId, filePath, token) {
   if (processes[botId]) return { ok: false, error: 'Already running' };
+
   const env = { ...process.env, BOT_TOKEN: token, POWERED_BY: '100Hosting' };
+  const ext = path.extname(filePath).toLowerCase();
+  const runner = ext === '.py' ? 'python3' : 'node';
+
   let child;
   try {
-    child = spawn('node', [filePath], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = spawn(runner, [filePath], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
-    return { ok: false, error: 'Failed to spawn process' };
+    return { ok: false, error: `Failed to spawn process: ${e.message}` };
   }
+
   processes[botId] = child;
   const db = getDb();
   db.prepare("UPDATE bots SET status='online', pid=? WHERE id=?").run(child.pid, botId);
-  addLog(botId, `Bot started (PID ${child.pid})`, 'info');
+  addLog(botId, `Bot started with ${runner} (PID ${child.pid})`, 'info');
+
   child.stdout.on('data', (data) => { addLog(botId, data.toString().trim(), 'info'); });
   child.stderr.on('data', (data) => { addLog(botId, data.toString().trim(), 'error'); });
   child.on('exit', (code) => {
@@ -42,6 +49,7 @@ function startBot(botId, filePath, token) {
       addLog(botId, `Process error: ${err.message}`, 'error');
     } catch (e) {}
   });
+
   return { ok: true, pid: child.pid };
 }
 

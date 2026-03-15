@@ -49,12 +49,3 @@ router.get('/me', require('../middleware').authMiddleware, (req, res) => {
 });
 
 module.exports = router;
-```
-
-Commit it.
-
----
-
-**File 2:** Click **"Add file" → "Create new file"**, type:
-```
-routes/bots.js

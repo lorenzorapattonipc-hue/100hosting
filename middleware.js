@@ -1,34 +1,19 @@
-// Example Discord bot — upload this as a starting point
-// Your bot token is injected automatically by 100Hosting
-// DO NOT hardcode your token here
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-in-production';
 
-const { Client, GatewayIntentBits } = require('discord.js');
-
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ]
-});
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}`);
-  console.log(`Powered by ${process.env.POWERED_BY || '100Hosting'}`);
-  console.log(`Serving ${client.guilds.cache.size} servers`);
-});
-
-client.on('messageCreate', (message) => {
-  if (message.author.bot) return;
-
-  if (message.content === '!ping') {
-    message.reply(`Pong! 🏓 Powered by 100Hosting`);
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
   }
-
-  if (message.content === '!info') {
-    message.reply(`This bot is hosted on **100Hosting** — reliable Discord bot infrastructure.`);
+  const token = header.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
   }
-});
+}
 
-// Token is set by 100Hosting automatically
-client.login(process.env.BOT_TOKEN);
+module.exports = { authMiddleware, JWT_SECRET };

@@ -25,7 +25,8 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!file.originalname.endsWith('.js')) return cb(new Error('Only .js files allowed'));
+    if (!file.originalname.endsWith('.js') && !file.originalname.endsWith('.py'))
+      return cb(new Error('Only .js and .py files allowed'));
     cb(null, true);
   }
 });
@@ -39,7 +40,7 @@ router.get('/', authMiddleware, (req, res) => {
 router.post('/', authMiddleware, upload.single('file'), (req, res) => {
   const { name, token } = req.body;
   if (!name || !token) return res.status(400).json({ error: 'Name and token required' });
-  if (!req.file) return res.status(400).json({ error: 'Bot .js file required' });
+  if (!req.file) return res.status(400).json({ error: 'Bot .js or .py file required' });
   if (token.split('.').length !== 3) return res.status(400).json({ error: 'Invalid bot token format' });
   const db = getDb();
   const count = db.prepare('SELECT COUNT(*) as c FROM bots WHERE user_id=?').get(req.user.id);
